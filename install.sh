@@ -1,12 +1,15 @@
 #!/bin/bash
-# open-saebyeok 설치 — ~/.claude 에 정체성·기억 골격을 배치하고 봇 의존성을 설치한다.
-# 기존 파일은 절대 덮어쓰지 않는다 (이미 쓰던 .claude 를 보호).
+# 설치 — 전용 데이터 폴더(~/.<APP_NAME>)에 정체성·기억 골격을 배치하고 봇 의존성을 설치한다.
+# 기존 파일은 절대 덮어쓰지 않는다 (이미 쓰던 데이터를 보호).
 set -e
 
-CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
+# 이름·데이터 경로는 bot/config.ts 와 동일 규칙 (리네이밍 시 양쪽 함께)
+APP_NAME="${APP_NAME:-mure}"
+# 데이터 홈 우선순위: AGENT_HOME > CLAUDE_HOME(레거시 호환) > ~/.${APP_NAME}
+DATA_DIR="${AGENT_HOME:-${CLAUDE_HOME:-$HOME/.$APP_NAME}}"
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "▶ open-saebyeok 설치 → $CLAUDE_HOME"
+echo "▶ $APP_NAME 설치 → $DATA_DIR"
 
 # 1) claude CLI 확인
 if ! command -v claude >/dev/null 2>&1; then
@@ -43,17 +46,17 @@ echo "▶ 봇 의존성 설치 (bun)..."
 copy_if_absent() {
   if [ ! -e "$2" ]; then cp "$1" "$2"; echo "  + $2"; else echo "  = $2 (이미 있음 → 보존)"; fi
 }
-mkdir -p "$CLAUDE_HOME/identity" \
-         "$CLAUDE_HOME/memory/active" "$CLAUDE_HOME/memory/semantic" "$CLAUDE_HOME/memory/archive"
-copy_if_absent "$REPO_DIR/identity/CLAUDE.template.md"   "$CLAUDE_HOME/CLAUDE.md"
-copy_if_absent "$REPO_DIR/identity/SOUL.template.md"     "$CLAUDE_HOME/identity/SOUL.md"
-copy_if_absent "$REPO_DIR/identity/IDENTITY.template.md" "$CLAUDE_HOME/identity/IDENTITY.md"
-cp "$REPO_DIR/identity/BOOTSTRAP.md" "$CLAUDE_HOME/identity/BOOTSTRAP.md"   # 항상 최신 유지
-cp "$REPO_DIR/identity/SETUP.md"     "$CLAUDE_HOME/identity/SETUP.md"       # 셋업 위자드
+mkdir -p "$DATA_DIR/identity" \
+         "$DATA_DIR/memory/active" "$DATA_DIR/memory/semantic" "$DATA_DIR/memory/archive"
+copy_if_absent "$REPO_DIR/identity/CLAUDE.template.md"   "$DATA_DIR/CLAUDE.md"
+copy_if_absent "$REPO_DIR/identity/SOUL.template.md"     "$DATA_DIR/identity/SOUL.md"
+copy_if_absent "$REPO_DIR/identity/IDENTITY.template.md" "$DATA_DIR/identity/IDENTITY.md"
+cp "$REPO_DIR/identity/BOOTSTRAP.md" "$DATA_DIR/identity/BOOTSTRAP.md"   # 항상 최신 유지
+cp "$REPO_DIR/identity/SETUP.md"     "$DATA_DIR/identity/SETUP.md"       # 셋업 위자드
 
 # 봇 설치 경로를 기록 — 셋업 위자드(에이전트)가 bot/.env·run.sh 위치를 알 수 있게
-echo "$REPO_DIR" > "$CLAUDE_HOME/.open-saebyeok-path"
-echo "  + ~/.claude/.open-saebyeok-path → $REPO_DIR"
+echo "$REPO_DIR" > "$DATA_DIR/.$APP_NAME-path"
+echo "  + $DATA_DIR/.$APP_NAME-path → $REPO_DIR"
 
 # 5) .env 준비 — 봇은 bot/.env 를 읽는다 (run.sh 가 bot/ 에서 실행)
 if [ ! -e "$REPO_DIR/bot/.env" ]; then

@@ -6,9 +6,8 @@
 import { randomUUID } from 'crypto'
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
-import { homedir } from 'os'
+import { DATA_DIR } from './config'
 
-const CLAUDE_HOME = process.env.CLAUDE_HOME || join(homedir(), '.claude')
 const SESSION_FILE = join(import.meta.dir, '.session')
 const TIMEOUT_MS = Number(process.env.CLAUDE_TIMEOUT_MS) || 1_800_000 // 30분
 const GRACEFUL_KILL_MS = 10_000
@@ -102,7 +101,7 @@ export async function chatStream(
     env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE = AUTOCOMPACT_PCT
 
     currentProc = proc = Bun.spawn(['claude', ...args], {
-      cwd: CLAUDE_HOME, env, stdin: 'pipe', stdout: 'pipe', stderr: 'pipe',
+      cwd: DATA_DIR, env, stdin: 'pipe', stdout: 'pipe', stderr: 'pipe',
     })
     proc.stdin.write(message)
     proc.stdin.end()

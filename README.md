@@ -1,4 +1,4 @@
-# open-saebyeok
+# mure
 
 **메신저로 대화하는, 이름을 가진 나만의 AI 친구.**
 텔레그램이나 슬랙으로 말을 걸면 답해주고, 나를 기억하고, 시키지 않아도 알아서 챙겨줘요.
@@ -51,8 +51,8 @@
 
 > 🔧 직접 설치하려면:
 > ```bash
-> git clone https://github.com/80x24/open-saebyeok ~/.claude/open-saebyeok
-> cd ~/.claude/open-saebyeok && ./install.sh
+> git clone https://github.com/80x24/open-saebyeok ~/mure
+> cd ~/mure && ./install.sh
 > ```
 > Bun 런타임이 없으면 `install.sh` 가 자동으로 설치합니다.
 
@@ -100,8 +100,8 @@
 ### 폴더 구조
 
 ```
-open-saebyeok/
-├─ install.sh            # ~/.claude 배치 + 인증 점검 + bun 자동설치
+mure/
+├─ install.sh            # ~/.mure 배치 + 인증 점검 + bun 자동설치
 ├─ bot/
 │  ├─ index.ts           # 채널 선택 + 온보딩 + 메시지 루프
 │  ├─ claude.ts          # claude -p spawn (구독 OAuth, API키 차단) ★
@@ -119,7 +119,7 @@ open-saebyeok/
 
 ### Hermes 5기둥 대비
 
-| 기둥 | open-saebyeok |
+| 기둥 | mure |
 |---|---|
 | **Soul** (정체성) | ✅ SOUL 템플릿 + 첫 실행 이름 온보딩 |
 | **Memory** (기억) | ✅ 마크다운 3계층 (active/semantic/archive) |
@@ -127,7 +127,7 @@ open-saebyeok/
 | **Skills** (스킬 자동화) | ✅ 승인 게이트 (`pending` → 사용자 승인 → `active`) |
 | **Self-improvement** | ✅ Curator (오래된 기억·스킬을 비파괴 archive) |
 
-**차별점:** Hermes는 자동으로 쌓여 drift(검증 안 된 자기개선) 위험이 있습니다. open-saebyeok은 **승인 게이트 + 비파괴 정리**로 *"compounding하되 폭주하지 않게"* 만듭니다.
+**차별점:** Hermes는 자동으로 쌓여 drift(검증 안 된 자기개선) 위험이 있습니다. mure은 **승인 게이트 + 비파괴 정리**로 *"compounding하되 폭주하지 않게"* 만듭니다.
 
 ### 보안
 
