@@ -1,0 +1,25 @@
+# 의존성 / 런타임
+node_modules/
+bun.lockb
+*.log
+.session
+.last-response
+
+# 시크릿
+.env
+
+# 부트스트랩 마커
+.open-saebyeok-bootstrapped
+
+# === 사용자 인스턴스 데이터 (공개 금지 — 템플릿만 추적) ===
+# 채워진 정체성은 각자 로컬에만 둔다
+identity/SOUL.md
+identity/IDENTITY.md
+identity/CLAUDE.md
+USER.md
+
+# 실제 기억 (빈 구조만 추적)
+memory/active/*
+memory/semantic/*
+memory/archive/*
+!memory/**/.gitkeep
