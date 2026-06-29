@@ -63,11 +63,13 @@ if [ ! -e "$REPO_DIR/bot/.env" ]; then
   cp "$REPO_DIR/.env.example" "$REPO_DIR/bot/.env"; echo "  + bot/.env (셋업 위자드가 채웁니다)"
 fi
 
+if [ -z "$QUIET" ]; then
 cat <<EOF
 
 ✅ 설치 완료. 다음 단계:
   1) Claude Code 에서 "설정 시작" 이라고 하세요 — 채널·토큰을 대화로 안내합니다.
-     (또는 직접 $REPO_DIR/.env 에 CHANNEL·토큰 입력)
+     (또는 직접 $REPO_DIR/bot/.env 에 CHANNEL·토큰 입력)
   2) cd $REPO_DIR/bot && ./run.sh
   3) 메신저로 첫 메시지를 보내면 — 에이전트가 가장 먼저 "이름"을 물어봅니다.
 EOF
+fi

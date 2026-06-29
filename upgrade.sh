@@ -38,7 +38,7 @@ fi
 # install.sh 재실행 = 의존성 갱신 + 새 기본 템플릿만 보충 (기존 데이터는 copy_if_absent 로 보존)
 echo ""
 echo "▶ 의존성·기본 템플릿 동기화 (기존 데이터 보존)"
-APP_NAME="$APP_NAME" AGENT_HOME="$AGENT_HOME" CLAUDE_HOME="$CLAUDE_HOME" bash "$REPO_DIR/install.sh"
+QUIET=1 APP_NAME="$APP_NAME" AGENT_HOME="$AGENT_HOME" CLAUDE_HOME="$CLAUDE_HOME" bash "$REPO_DIR/install.sh"
 
 echo ""
 echo "✅ 업그레이드 완료. 데이터($DATA_DIR)는 그대로입니다."

@@ -17,11 +17,12 @@ echo "   to:   $DST"
 echo ""
 
 # 안전장치 — nuanua 설치 흔적이 없으면 중단 (본체 폴더 오인 방지)
-if [ ! -e "$SRC/.nuanua-bootstrapped" ] && [ ! -e "$SRC/.nuanua-path" ] \
+if [ -z "$FORCE" ] && [ ! -e "$SRC/.nuanua-bootstrapped" ] && [ ! -e "$SRC/.nuanua-path" ] \
    && [ ! -e "$SRC/.$APP_NAME-bootstrapped" ] && [ ! -e "$SRC/.$APP_NAME-path" ]; then
   echo "✗ $SRC 에서 설치 흔적(마커)을 찾지 못했습니다."
   echo "  이 폴더는 마이그레이션 대상이 아닙니다 (Claude Code 본체 등 다른 데이터를 보호합니다)."
-  echo "  대상이 맞다면: APP_NAME=$APP_NAME bash migrate.sh <소스경로> <대상경로>"
+  echo "  이 폴더가 확실히 nuanua 데이터가 맞다면 강제로 진행하세요:"
+  echo "    FORCE=1 bash migrate.sh \"$SRC\" \"$DST\""
   exit 1
 fi
 

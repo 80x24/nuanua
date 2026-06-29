@@ -65,4 +65,8 @@ const main = async () => {
   await channel.start(buildHandler())
 }
 
-main().catch((e) => { console.error(e); process.exit(1) })
+main().catch((e) => {
+  // 설정 오류 등은 스택 없이 메시지만 깔끔하게 (비개발자 배려)
+  console.error('✗ ' + (e?.message || e))
+  process.exit(1)
+})
