@@ -26,7 +26,10 @@
 ### 💬 슬랙이면 (단계가 조금 많아요 — 천천히 같이)
 슬랙은 "앱"을 하나 만들어 연결해요. 브라우저에서 진행합니다.
 
-1. **앱 만들기** — https://api.slack.com/apps → **Create New App** → **From scratch** → 앱 이름 짓고 워크스페이스 선택.
+> **이미 쓰는 슬랙 앱이 있다면** — 새로 만들지 말고 그 앱에 아래 **2·3·4·5단계(Socket Mode·이벤트·권한·재설치)만 추가**하면 됩니다. 1단계는 건너뛰세요. 봇은 토큰(`xoxb`/`xapp`)만 받으면 동작하므로 새 앱이 필요 없어요.
+> ⚠️ 단, 그 앱이 **이미 다른 봇 서버에 Socket Mode 로 연결돼 동작 중**이면 이벤트가 두 서버로 나뉘어 충돌합니다 — 놀고 있거나 이 봇 전용인 앱일 때만 재사용하세요.
+
+1. **앱 만들기** (새로 만들 때만) — https://api.slack.com/apps → **Create New App** → **From scratch** → 앱 이름 짓고 워크스페이스 선택.
 2. **실시간 연결 켜기** — 왼쪽 메뉴 **Socket Mode** → **Enable Socket Mode** 를 켭니다.
    - 켜면 토큰을 만들라고 해요 → 권한 **`connections:write`** 선택 → 생성하면 **`xapp-`** 로 시작하는 키가 나옵니다 → 복사.
 3. **메시지 받기 설정** — 왼쪽 **Event Subscriptions** → **Enable Events** 켜기 → **Subscribe to bot events** → **Add Bot User Event** → **`message.im`** 을 추가.
