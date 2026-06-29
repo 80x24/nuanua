@@ -1,7 +1,21 @@
 // 메시지 핸들러 — 채널/엔진과 분리된 순수 흐름 (의존성 주입으로 테스트 가능)
+import { basename } from 'path'
 import type { IncomingMessage, ReplyHandle } from './channels/channel'
 import { withBootstrap } from './bootstrap'
 import { handleSkillCommand } from './skills'
+
+// 첨부·답장을 프롬프트로 조립 (이미지=claude Read 도구, 텍스트=인라인, 답장=문맥 주입)
+function composeUserPrompt(msg: IncomingMessage): string {
+  const parts: string[] = []
+  if (msg.replyTo) parts.push(`[답장 대상 (from: ${msg.replyTo.from})]\n${msg.replyTo.text}\n`)
+  for (const a of msg.attachments ?? []) {
+    if (a.kind === 'image') parts.push(`[첨부 이미지: ${a.path} — Read 도구로 열어 보세요]`)
+    else if (a.kind === 'text') parts.push(`<file name="${basename(a.path)}">\n${a.content ?? ''}\n</file>`)
+    else parts.push(`[첨부: ${basename(a.path)} — 지원하지 않는 형식이에요 (jpg/png/txt/md/json 등만)]`)
+  }
+  parts.push(msg.text || '(첨부만 보냈어요)')
+  return parts.join('\n')
+}
 
 export interface HandlerDeps {
   claudeHome: string
@@ -33,7 +47,7 @@ export function createMessageHandler(deps: HandlerDeps) {
 
     if (deps.isBusy()) { await reply.final('아직 이전 응답을 처리 중이에요. 잠시만요.'); return }
 
-    const prompt = withBootstrap(deps.claudeHome, text)
+    const prompt = withBootstrap(deps.claudeHome, composeUserPrompt(msg))
     let last = 0
     try {
       const { response } = await deps.chat(prompt, (display) => {

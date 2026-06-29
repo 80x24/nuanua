@@ -8,7 +8,7 @@ import { needsBootstrap, withBootstrap, markerPath } from '../bootstrap'
 import { createMessageHandler } from '../handler'
 import { createTelegramChannel } from '../channels/telegram'
 import { createSlackChannel } from '../channels/slack'
-import type { ReplyHandle } from '../channels/channel'
+import type { ReplyHandle, IncomingMessage } from '../channels/channel'
 
 let home: string
 beforeEach(() => {
@@ -111,5 +111,36 @@ describe('③ 이름 온보딩 흐름 (claude mock)', () => {
     const handler = createMessageHandler({ claudeHome: home, chat, cancel: () => true, clear: () => {}, isBusy: () => false })
     await handler({ text: '오늘 날씨 어때?', userId: 'u1', isOwner: true }, noopReply())
     expect(captured).toBe('오늘 날씨 어때?')   // 지시 없이 원문 그대로
+  })
+})
+
+describe('④ 첨부·답장 (1단계 리치 기능)', () => {
+  const mk = (overrides: Partial<IncomingMessage>) => {
+    writeFileSync(markerPath(home), '') // 온보딩 완료 가정 (부트스트랩 지시 배제)
+    let captured = ''
+    const chat = async (p: string) => { captured = p; return { response: 'ok', display: 'ok' } }
+    const handler = createMessageHandler({ claudeHome: home, chat, cancel: () => true, clear: () => {}, isBusy: () => false })
+    const msg = { text: '', userId: 'u1', isOwner: true, ...overrides } as IncomingMessage
+    return { handler, msg, get: () => captured }
+  }
+  test('답장 문맥이 프롬프트에 주입된다', async () => {
+    const s = mk({ text: '이거 뭐야', replyTo: { text: '원본메시지', from: '철수' } })
+    await s.handler(s.msg, noopReply())
+    expect(s.get()).toContain('원본메시지'); expect(s.get()).toContain('철수'); expect(s.get()).toContain('이거 뭐야')
+  })
+  test('이미지 첨부 → Read 도구 안내로 주입', async () => {
+    const s = mk({ attachments: [{ path: '/tmp/x.jpg', kind: 'image' }] })
+    await s.handler(s.msg, noopReply())
+    expect(s.get()).toContain('/tmp/x.jpg'); expect(s.get()).toContain('Read')
+  })
+  test('텍스트 파일 → 인라인 주입', async () => {
+    const s = mk({ attachments: [{ path: '/tmp/a.txt', kind: 'text', content: '파일내용입니다' }] })
+    await s.handler(s.msg, noopReply())
+    expect(s.get()).toContain('파일내용입니다'); expect(s.get()).toContain('a.txt')
+  })
+  test('미지원 파일 → 거부 안내', async () => {
+    const s = mk({ attachments: [{ path: '/tmp/x.zip', kind: 'unsupported' }] })
+    await s.handler(s.msg, noopReply())
+    expect(s.get()).toContain('지원하지 않는')
   })
 })

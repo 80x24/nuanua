@@ -1,8 +1,9 @@
-// 텔레그램 어댑터 (grammY)
+// 텔레그램 어댑터 (grammY) — 텍스트·이미지·파일·답장(인용)을 IncomingMessage 로 정규화한다.
 import { Bot } from 'grammy'
 import { autoRetry } from '@grammyjs/auto-retry'
 import type { Channel, IncomingMessage, ReplyHandle } from './channel'
 import { resolveOwner } from './owner'
+import { classifyExt, saveAttachment, readTextSafe } from '../media'
 
 const NO_PREVIEW = { link_preview_options: { is_disabled: true } } as const
 
@@ -22,38 +23,74 @@ export function createTelegramChannel(): Channel {
     try { await bot.api.sendMessage(ownerId, text, NO_PREVIEW) } catch {}
   }
 
+  // reply_to_message → replyTo 정규화
+  const extractReply = (ctx: any): IncomingMessage['replyTo'] => {
+    const r = ctx.message?.reply_to_message
+    if (!r) return undefined
+    return { text: r.text || r.caption || '', from: r.from?.first_name || '상대' }
+  }
+  const fileUrl = (filePath: string) => `https://api.telegram.org/file/bot${token}/${filePath}`
+
   return {
     name: 'telegram',
     notify,
     async start(handler) {
-      bot.on('message:text', async (ctx) => {
+      // 공통: 소유자 게이트 + 스트리밍 reply + handler 호출 (모든 메시지 타입 공유 — DRY)
+      const run = async (ctx: any, build: () => Promise<IncomingMessage> | IncomingMessage) => {
         const { allowed, ownerSet } = resolveOwner(process.env.TELEGRAM_CHAT_ID, ctx.chat.id)
         if (!ownerSet) {
-          // 소유자 미설정 — 발신자에게 본인 chat id 를 알려주고 처리하지 않음
           await ctx.reply(
             `🔒 아직 소유자가 설정되지 않았어요.\n당신의 chat id: ${ctx.chat.id}\n` +
             `이 값을 .env 의 TELEGRAM_CHAT_ID 에 넣고 /restart 해주세요.`,
-            NO_PREVIEW
+            NO_PREVIEW,
           )
           return
         }
-        if (!allowed) return // 소유자 아님 — 무시
+        if (!allowed) return
 
         let messageId: number | null = null
         const ensure = async (text: string) => {
           const t = text.slice(-3900) || '...'
           if (messageId == null) {
-            const m = await ctx.reply(t, NO_PREVIEW)
-            messageId = m.message_id
+            const m = await ctx.reply(t, NO_PREVIEW); messageId = m.message_id
           } else {
             try { await ctx.api.editMessageText(ctx.chat.id, messageId, t, NO_PREVIEW) } catch {}
           }
         }
         const reply: ReplyHandle = { update: ensure, final: ensure }
-        const msg: IncomingMessage = { text: ctx.message.text, userId: String(ctx.chat.id), isOwner: true }
-        await handler(msg, reply)
-      })
-      console.log('[telegram] long polling 시작')
+        try {
+          await handler(await build(), reply)
+        } catch (e: any) {
+          await ensure(`⚠️ 처리 중 오류: ${(e?.message || String(e)).slice(0, 200)}`)
+        }
+      }
+
+      const base = (ctx: any) => ({ userId: String(ctx.chat.id), isOwner: true, replyTo: extractReply(ctx) })
+
+      bot.on('message:text', (ctx) =>
+        run(ctx, () => ({ ...base(ctx), text: ctx.message.text })))
+
+      bot.on('message:photo', (ctx) =>
+        run(ctx, async () => {
+          const file = await ctx.getFile()
+          const path = await saveAttachment(fileUrl(file.file_path!), `photo-${file.file_unique_id}.jpg`)
+          return { ...base(ctx), text: ctx.message.caption || '', attachments: [{ path, kind: 'image' as const }] }
+        }))
+
+      bot.on('message:document', (ctx) =>
+        run(ctx, async () => {
+          const doc = ctx.message.document
+          const file = await ctx.getFile()
+          const name = doc.file_name || `file-${file.file_unique_id}`
+          const path = await saveAttachment(fileUrl(file.file_path!), name)
+          const kind = classifyExt(name)
+          return {
+            ...base(ctx), text: ctx.message.caption || '',
+            attachments: [{ path, kind, content: kind === 'text' ? readTextSafe(path) : undefined }],
+          }
+        }))
+
+      console.log('[telegram] long polling 시작 (text·photo·document·reply)')
       void bot.start()
     },
   }
