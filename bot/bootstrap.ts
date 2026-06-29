@@ -1,11 +1,9 @@
 // 부트스트랩 — 첫 실행 시 "이름부터 묻기" 를 위한 순수 로직 (claude 호출 없음, 테스트 쉬움)
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { APP_NAME } from './config'
+import { markerPath } from './config'
 
-export function markerPath(dataDir: string): string {
-  return join(dataDir, `.${APP_NAME}-bootstrapped`)
-}
+export { markerPath } // 정의는 config(SSOT) — 여기선 재노출 (테스트·기존 import 호환)
 
 /** 아직 이름이 설정되지 않았는가 (마커 파일 부재) */
 export function needsBootstrap(dataDir: string): boolean {

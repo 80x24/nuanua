@@ -37,7 +37,10 @@ export async function runHeartbeatOnce(deps: HeartbeatDeps): Promise<HeartbeatRe
     if (summary && summary.length < 1500) await deps.notify(`💓 ${summary.slice(0, 1000)}${curNote}`)
     return 'ok'
   } catch (e: any) {
-    await deps.notify(`💔 하트비트 실패: ${(e?.message || String(e)).slice(0, 200)}`)
+    const m = e?.message || String(e)
+    // 실행 직전 사용자 메시지에 선점(busy)된 경우는 실패가 아니므로 조용히 skip (오탐 알림 방지)
+    if (m.includes('이전 응답 처리 중')) { console.log('[heartbeat] 실행 직전 선점 — 건너뜀'); return 'busy' }
+    await deps.notify(`💔 하트비트 실패: ${m.slice(0, 200)}`)
     return 'error'
   }
 }

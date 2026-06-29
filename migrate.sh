@@ -7,7 +7,7 @@
 #  - CLAUDE.md 는 자동 복사하지 않는다 (Claude Code 전역 지침과 섞일 수 있어 사용자 판단에 맡김).
 set -e
 
-APP_NAME="${APP_NAME:-nuanua}"
+source "$(cd "$(dirname "$0")" && pwd)/lib.sh"   # APP_NAME (SSOT)
 SRC="${1:-$HOME/.claude}"
 DST="${2:-$HOME/.$APP_NAME}"
 

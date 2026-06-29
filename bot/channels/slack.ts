@@ -40,7 +40,7 @@ export async function createSlackChannel(): Promise<Channel> {
 
         let ts: string | null = null
         const ensure = async (text: string) => {
-          const t = (text || '...').slice(0, 3900)
+          const t = text.slice(-3900) || '...' // telegram 과 통일 — 스트리밍 중 최신(뒤쪽) 표시
           if (!ts) { const r: any = await say(t); ts = r.ts }
           else { try { await client.chat.update({ channel: message.channel, ts, text: t }) } catch {} }
         }

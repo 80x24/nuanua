@@ -8,10 +8,19 @@ import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { DATA_DIR } from './config'
 
-const SESSION_FILE = join(import.meta.dir, '.session')
+const SESSION_FILE = join(DATA_DIR, '.session') // 데이터 폴더에 — 코드/데이터 분리 (인스턴스별 격리)
 const TIMEOUT_MS = Number(process.env.CLAUDE_TIMEOUT_MS) || 1_800_000 // 30분
 const GRACEFUL_KILL_MS = 10_000
 const AUTOCOMPACT_PCT = process.env.CLAUDE_AUTOCOMPACT_PCT || '85'
+
+// SIGTERM 후 유예시간 내 안 죽으면 SIGKILL — spawn 종료 공통 로직 (값 통일)
+function killGracefully(proc: ReturnType<typeof Bun.spawn> | null, graceMs = GRACEFUL_KILL_MS) {
+  if (!proc) return
+  try {
+    proc.kill('SIGTERM')
+    setTimeout(() => { try { if (proc.exitCode === null) proc.kill('SIGKILL') } catch {} }, graceMs)
+  } catch {}
+}
 
 let sessionId: string | null = null
 let sessionCreated = false
@@ -46,10 +55,7 @@ export function clearSession() {
 export function cancelStream(): boolean {
   if (!busy || !currentProc) return false
   cancelled = true
-  try {
-    currentProc.kill('SIGTERM')
-    setTimeout(() => { try { if (currentProc && currentProc.exitCode === null) currentProc.kill('SIGKILL') } catch {} }, 5000)
-  } catch {}
+  killGracefully(currentProc)
   busy = false
   return true
 }
@@ -106,10 +112,7 @@ export async function chatStream(
     proc.stdin.write(message)
     proc.stdin.end()
 
-    timeout = setTimeout(() => {
-      try { proc?.kill('SIGTERM') } catch {}
-      setTimeout(() => { try { if (proc && proc.exitCode === null) proc.kill('SIGKILL') } catch {} }, GRACEFUL_KILL_MS)
-    }, TIMEOUT_MS)
+    timeout = setTimeout(() => killGracefully(proc), TIMEOUT_MS)
 
     const stderrPromise = new Response(proc.stderr).text()
     let response = '', display = '', toolLabel = '', toolInput = '', resultErrorMsg = ''
@@ -177,10 +180,7 @@ export async function chatStream(
   } finally {
     busy = false; currentProc = null
     if (timeout) clearTimeout(timeout)
-    if (proc && proc.exitCode === null) {
-      try { proc.kill('SIGTERM') } catch {}
-      setTimeout(() => { try { if (proc && proc.exitCode === null) proc.kill('SIGKILL') } catch {} }, 5000)
-    }
+    if (proc && proc.exitCode === null) killGracefully(proc)
   }
 }
 

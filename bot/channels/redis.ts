@@ -12,6 +12,9 @@ export const JOBS_QUEUE = 'jobs'
 export const doneKey = (id: string) => `done:${id}`
 const RESULT_TTL = 300 // 결과는 5분 보관 (relay 가 가져가면 소비됨)
 
+// IORedis 연결 생성 공통 (brpop blocking 위해 maxRetriesPerRequest: null) — relay 와 공유
+export const newRedis = (url: string) => new IORedis(url, { maxRetriesPerRequest: null })
+
 /**
  * job 하나를 코어 handler 로 처리하고 결과를 Redis 에 push 한다 (순수 로직 — 테스트용 분리).
  * worker 는 중간 스트리밍을 생략하고 최종 응답만 relay 로 전달한다.
@@ -39,8 +42,8 @@ export async function processJob(
 export function createRedisWorkerChannel(): Channel {
   const url = process.env.REDIS_URL
   if (!url) throw new Error('REDIS_URL 가 없습니다 (worker 모드 필수)')
-  const redis = new IORedis(url, { maxRetriesPerRequest: null })
-  const blocking = new IORedis(url, { maxRetriesPerRequest: null }) // brpop 전용 연결
+  const redis = newRedis(url)
+  const blocking = newRedis(url) // brpop 전용 연결
 
   return {
     name: 'redis-worker',

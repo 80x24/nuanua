@@ -19,6 +19,6 @@ export const DATA_DIR =
   process.env.CLAUDE_HOME ||
   join(homedir(), `.${APP_NAME}`)
 
-// 이름에서 파생되는 마커 파일 경로 (하드코딩 금지)
-export const bootstrapMarker = join(DATA_DIR, `.${APP_NAME}-bootstrapped`)
-export const pathMarker = join(DATA_DIR, `.${APP_NAME}-path`)
+// 이름에서 파생되는 마커 경로 — dataDir 주입 (SSOT: 이름 규칙은 여기 한 곳, 테스트는 임의 dir 주입 가능)
+export const markerPath = (dataDir: string) => join(dataDir, `.${APP_NAME}-bootstrapped`)
+export const pathMarker = (dataDir: string) => join(dataDir, `.${APP_NAME}-path`)

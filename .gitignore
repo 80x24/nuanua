@@ -8,8 +8,9 @@ bun.lockb
 # 시크릿
 .env
 
-# 부트스트랩 마커
-.nuanua-bootstrapped
+# 인스턴스 마커 (보통 DATA_DIR 에 있음; 레포에 생길 경우 대비 — 이름 무관 글롭)
+.*-bootstrapped
+.*-path
 
 # === 사용자 인스턴스 데이터 (공개 금지 — 템플릿만 추적) ===
 # 채워진 정체성은 각자 로컬에만 둔다

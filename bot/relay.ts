@@ -7,10 +7,10 @@
 // 정책(b, deferred): relay 는 claude 를 직접 돌리지 않는다(데이터가 로컬에만 있으므로).
 // 알려진 한계(MVP): worker 가 job 을 가져간 뒤 처리 중 죽으면 그 job 은 유실된다(lease/재큐 미구현).
 
-import IORedis from 'ioredis'
 import { randomUUID } from 'crypto'
+import type IORedis from 'ioredis'
 import type { Channel, IncomingMessage, ReplyHandle } from './channels/channel'
-import { JOBS_QUEUE, doneKey, type Job } from './channels/redis'
+import { JOBS_QUEUE, doneKey, newRedis, type Job } from './channels/redis'
 
 const RELAY_TIMEOUT = Number(process.env.RELAY_TIMEOUT_SEC) || 8
 
@@ -30,8 +30,8 @@ export async function delegateJob(
 }
 
 export function createRelayHandler(channel: Channel, redisUrl: string) {
-  const redis = new IORedis(redisUrl, { maxRetriesPerRequest: null })
-  const blocking = new IORedis(redisUrl, { maxRetriesPerRequest: null })
+  const redis = newRedis(redisUrl)
+  const blocking = newRedis(redisUrl)
 
   return async (msg: IncomingMessage, reply: ReplyHandle): Promise<void> => {
     if (!msg.isOwner) return
@@ -44,7 +44,7 @@ export function createRelayHandler(channel: Channel, redisUrl: string) {
     await reply.final('💤 지금은 로컬(노트북)이 꺼져 있어 바로 처리하지 못해요. 켜지면 이어서 답해드릴게요.')
 
     // 늦은 결과를 별도 연결로 계속 기다렸다가, 도착하면 능동 알림 (현 프로세스가 살아있는 동안)
-    const late = new IORedis(redisUrl, { maxRetriesPerRequest: null })
+    const late = newRedis(redisUrl)
     late.brpop(doneKey(job.id), 0)
       .then((r) => { if (r) return channel.notify(`⏰ (늦게 도착한 답)\n${r[1]}`) })
       .catch(() => {})
