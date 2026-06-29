@@ -52,6 +52,15 @@ export function clearSession() {
   sessionId = null; sessionCreated = false
   try { unlinkSync(SESSION_FILE) } catch {}
 }
+
+// 세션 전환 — 다음 호출부터 해당 id 로 --resume (8자 단축 id 도 그대로 전달; claude 가 해석)
+export function resumeSession(id: string) {
+  sessionId = id; sessionCreated = true; saveSession()
+}
+// 현재 세션 상태 (/status 표시용)
+export function sessionStatus(): { id: string | null; active: boolean; busy: boolean } {
+  return { id: sessionId, active: sessionCreated, busy }
+}
 export function cancelStream(): boolean {
   if (!busy || !currentProc) return false
   cancelled = true

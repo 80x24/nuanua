@@ -144,3 +144,31 @@ describe('④ 첨부·답장 (1단계 리치 기능)', () => {
     expect(s.get()).toContain('지원하지 않는')
   })
 })
+
+describe('⑤ 세션 명령', () => {
+  const mkh = (extra: any = {}) => createMessageHandler({
+    claudeHome: home, chat: async () => ({ response: 'ok', display: 'ok' }),
+    cancel: () => true, clear: () => {}, isBusy: () => false, ...extra,
+  })
+  test('/status → 세션 id·상태 표시', async () => {
+    const h = mkh({ status: () => ({ id: 'abcd1234efgh5678', active: true, busy: false }) })
+    const r = noopReply(); await h({ text: '/status', userId: 'u1', isOwner: true }, r)
+    expect(r.last()).toContain('abcd1234')
+  })
+  test('/resume <id> → 전환 콜백 호출 + 안내', async () => {
+    let resumed = ''
+    const h = mkh({ resume: (id: string) => { resumed = id } })
+    const r = noopReply(); await h({ text: '/resume xyz789abc', userId: 'u1', isOwner: true }, r)
+    expect(resumed).toBe('xyz789abc'); expect(r.last()).toContain('전환')
+  })
+  test('/resume 인자 없으면 사용법 안내', async () => {
+    const r = noopReply(); await mkh({ resume: () => {} })({ text: '/resume', userId: 'u1', isOwner: true }, r)
+    expect(r.last()).toContain('사용법')
+  })
+  test('/compact → chat 에 /compact 전달 + 완료 표시', async () => {
+    let sent = ''
+    const h = mkh({ chat: async (p: string) => { sent = p; return { response: '', display: '' } } })
+    const r = noopReply(); await h({ text: '/compact', userId: 'u1', isOwner: true }, r)
+    expect(sent).toBe('/compact'); expect(r.last()).toContain('압축')
+  })
+})

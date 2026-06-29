@@ -4,7 +4,7 @@
 //   worker            — Redis 큐를 듣고 처리만 (로컬, 데이터 보유). relay 와 짝
 //   relay             — 메신저 입구만 쥐고 worker 에 위임 (외부 상시 서버, 데이터 없음)
 
-import { chatStreamWithRetry, cancelStream, clearSession, isBusy } from './claude'
+import { chatStreamWithRetry, cancelStream, clearSession, isBusy, resumeSession, sessionStatus } from './claude'
 import { createMessageHandler } from './handler'
 import { needsBootstrap } from './bootstrap'
 import { startHeartbeat } from './heartbeat'
@@ -21,6 +21,8 @@ const buildHandler = () => createMessageHandler({
   clear: clearSession,
   isBusy,
   restart: () => { setTimeout(() => process.exit(0), 500) }, // run.sh 가 다시 띄운다
+  resume: resumeSession,
+  status: sessionStatus,
 })
 
 const startHb = (notify: (t: string) => Promise<void>) =>

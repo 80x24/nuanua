@@ -26,6 +26,10 @@ export interface HandlerDeps {
   isBusy: () => boolean
   /** 봇 프로세스 재시작 (run.sh 가 다시 띄움). 미주입이면 /restart 비활성 */
   restart?: () => void
+  /** 세션 전환 (/resume <id>) */
+  resume?: (id: string) => void
+  /** 세션 상태 (/status) */
+  status?: () => { id: string | null; active: boolean; busy: boolean }
 }
 
 export function createMessageHandler(deps: HandlerDeps) {
@@ -38,6 +42,29 @@ export function createMessageHandler(deps: HandlerDeps) {
     if (text === '/restart') {
       if (deps.restart) { await reply.final('🔄 재시작할게요. 잠시 후 다시 인사드릴게요.'); deps.restart() }
       else { await reply.final('재시작이 지원되지 않는 환경이에요.') }
+      return
+    }
+    if (text === '/status') {
+      const s = deps.status?.()
+      await reply.final(`🪪 세션: \`${s?.id ? s.id.slice(0, 8) : '없음(새 대화)'}\`\n상태: ${s?.busy ? '처리 중' : '대기'}`)
+      return
+    }
+    if (text.startsWith('/resume')) {
+      const id = text.replace('/resume', '').trim()
+      if (!id) { await reply.final('사용법: `/resume <세션id>`'); return }
+      if (deps.resume) { deps.resume(id); await reply.final(`🔄 세션 \`${id.slice(0, 8)}\` 로 전환했어요. 이어서 말 걸어 주세요.`) }
+      else { await reply.final('세션 전환이 지원되지 않는 환경이에요.') }
+      return
+    }
+    if (text === '/compact') {
+      if (deps.isBusy()) { await reply.final('처리 중이에요. 잠시 후 다시 시도해 주세요.'); return }
+      await reply.update('🗜 대화를 압축하는 중…')
+      try {
+        await deps.chat('/compact', () => {})
+        await reply.final('✅ 대화를 압축했어요. 맥락은 유지돼요.')
+      } catch (e: any) {
+        await reply.final(`⚠️ 압축 실패: ${(e?.message || String(e)).slice(0, 150)}`)
+      }
       return
     }
 
