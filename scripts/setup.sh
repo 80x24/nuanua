@@ -56,6 +56,26 @@ t() {
     ko:note_lang)  echo "(봇은 당신이 보낸 언어로 답해요 — 이 선택은 이 위자드의 언어만 바꿉니다.)" ;;
     en:invalid)    echo "Invalid choice." ;;
     ko:invalid)    echo "잘못된 선택이에요." ;;
+    en:sl_intro)   echo "[Slack] I'll guide you step by step. Open https://api.slack.com/apps in your browser." ;;
+    ko:sl_intro)   echo "[슬랙] 한 단계씩 안내할게요. 브라우저에서 https://api.slack.com/apps 를 여세요." ;;
+    en:sl1)        echo "1/6) Create New App -> From scratch -> name it + pick your workspace." ;;
+    ko:sl1)        echo "1/6) Create New App -> From scratch -> 이름 + 워크스페이스 선택." ;;
+    en:sl2)        echo "2/6) Socket Mode -> Enable -> create a token with connections:write -> copy the xapp- token." ;;
+    ko:sl2)        echo "2/6) Socket Mode -> Enable -> connections:write 토큰 생성 -> xapp- 토큰 복사." ;;
+    en:sl3)        echo "3/6) Event Subscriptions -> Enable -> Subscribe to bot events -> add message.im -> Save." ;;
+    ko:sl3)        echo "3/6) Event Subscriptions -> Enable -> Subscribe to bot events -> message.im 추가 -> 저장." ;;
+    en:sl4)        echo "4/6) OAuth & Permissions -> Bot Token Scopes -> make sure chat:write is there (add if missing)." ;;
+    ko:sl4)        echo "4/6) OAuth & Permissions -> Bot Token Scopes -> chat:write 있는지 확인(없으면 추가)." ;;
+    en:sl5)        echo "5/6) Install to Workspace -> Allow -> copy the xoxb- Bot Token." ;;
+    ko:sl5)        echo "5/6) Install to Workspace -> Allow -> xoxb- 봇 토큰 복사." ;;
+    en:sl6)        echo "6/6) Your Slack profile -> ... (More) -> Copy member ID (U...)." ;;
+    ko:sl6)        echo "6/6) 본인 Slack 프로필 -> ... (More) -> Copy member ID (U...)." ;;
+    en:enter_done) echo "   [Press Enter when done] " ;;
+    ko:enter_done) echo "   [끝나면 Enter] " ;;
+    en:keep_tg)    echo "Keep Telegram too — run both? [Y/n] " ;;
+    ko:keep_tg)    echo "텔레그램도 같이 쓸까요(둘 다)? [Y/n] " ;;
+    en:bolt)       echo "Installing Slack SDK (@slack/bolt)..." ;;
+    ko:bolt)       echo "슬랙 SDK(@slack/bolt) 설치 중..." ;;
     *) echo "$1" ;;
   esac
 }
@@ -88,15 +108,29 @@ case "$ch" in
     echo; t saved
     ;;
   2)
-    echo; t sl_help
-    printf "%s" "$(t ask_xoxb)";  read -r -s xoxb; echo
-    printf "%s" "$(t ask_xapp)";  read -r -s xapp; echo
-    printf "%s" "$(t ask_owner)"; read -r owner
+    echo; t sl_intro; echo
+    t sl1; printf "%s" "$(t enter_done)"; read -r _ || true
+    t sl2; printf "%s" "$(t ask_xapp)";  read -r -s xapp; echo
+    t sl3; printf "%s" "$(t enter_done)"; read -r _ || true
+    t sl4; printf "%s" "$(t enter_done)"; read -r _ || true
+    t sl5; printf "%s" "$(t ask_xoxb)";  read -r -s xoxb; echo
+    t sl6; printf "%s" "$(t ask_owner)"; read -r owner
+    # 슬랙 SDK 보장 (없을 때만)
+    if [ ! -d "$REPO_DIR/bot/node_modules/@slack/bolt" ]; then
+      echo; t bolt; ( cd "$REPO_DIR/bot" && bun add @slack/bolt >/dev/null 2>&1 ) || true
+    fi
     set_env MODE standalone
-    set_env CHANNEL slack
     set_env SLACK_BOT_TOKEN "$xoxb"
     set_env SLACK_APP_TOKEN "$xapp"
     set_env SLACK_OWNER_ID "$owner"
+    # 텔레그램이 이미 설정돼 있으면 둘 다 쓸지 선택
+    tgtok="$(grep -E '^TELEGRAM_BOT_TOKEN=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | sed 's/#.*//' | tr -d '[:space:]')"
+    if [ -n "$tgtok" ]; then
+      echo; printf "%s" "$(t keep_tg)"; read -r kt || true
+      case "$kt" in n|N|no|No) set_env CHANNEL slack ;; *) set_env CHANNEL telegram,slack ;; esac
+    else
+      set_env CHANNEL slack
+    fi
     echo; t saved
     ;;
   3|"")
