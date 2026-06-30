@@ -49,7 +49,7 @@ const versionCheck = () => checkUpdate(REPO_DIR).then(async (r) => {
   if (!r || r.behind <= 0) return
   if (process.env.AUTO_UPGRADE === 'true') {
     await activeChannel?.notify(`🆕 새 버전(${r.behind}개 커밋) — 자동 업데이트할게요…`)
-    const p = Bun.spawn(['bash', join(REPO_DIR, 'upgrade.sh')], { stdout: 'inherit', stderr: 'inherit' })
+    const p = Bun.spawn(['bash', join(REPO_DIR, 'scripts', 'upgrade.sh')], { stdout: 'inherit', stderr: 'inherit' })
     await p.exited
     await activeChannel?.notify('✅ 업데이트 완료. 재시작해요.')
     setTimeout(() => process.exit(0), 500) // run.sh 가 새 코드로 재시작

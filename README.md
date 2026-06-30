@@ -84,7 +84,7 @@
 - `/cancel` — 답하는 도중 멈추기
 - `/skill list` — 봇이 배운 기능 목록
 
-> 🔧 자연어 명령은 봇이 응답에 `[[do:...]]` 디렉티브를 넣어 실행합니다(`identity/CLAUDE.md` 규약). "최신으로 업데이트해줘" 하면 `upgrade.sh` 를 돌리고 재시작까지 해요. · `/skill approve|reject <이름>` — 제안 스킬 승인/거절(거절=archive).
+> 🔧 자연어 명령은 봇이 응답에 `[[do:...]]` 디렉티브를 넣어 실행합니다(`identity/CLAUDE.md` 규약). "최신으로 업데이트해줘" 하면 `scripts/upgrade.sh` 를 돌리고 재시작까지 해요. · `/skill approve|reject <이름>` — 제안 스킬 승인/거절(거절=archive).
 
 ## 대화 장소 바꾸기 (텔레그램 ↔ 슬랙)
 
@@ -103,32 +103,41 @@
 ### 폴더 구조
 
 ```
-nuanua/
-├─ install.sh            # ~/.nuanua 배치 + 인증 점검 + bun 자동설치
-├─ upgrade.sh            # 코드만 갱신 (데이터 보존)
-├─ migrate.sh            # 레거시 ~/.claude → ~/.nuanua 비파괴 이전
-├─ setup-relay.sh        # relay 셋업 위자드 (worker 자동전환 + 배포 안내)
+nuanua/                    # 코드·지침 (THE RULE — git 으로 버전업)
+├─ install.sh            # 설치 진입점 (~/.nuanua 배치 + 인증 점검 + bun)
+├─ lib.sh                # 공통 이름·경로 파생 (SSOT — 모든 스크립트가 source)
+├─ scripts/              # 보조: upgrade · migrate · setup-relay · install-daemon · setup-cli
 ├─ Dockerfile · fly.toml # relay 배포 골격 (외부 상시 서버)
 ├─ bot/
-│  ├─ index.ts           # MODE 분기(standalone/worker/relay) + 메시지 루프
+│  ├─ index.ts           # MODE 분기(standalone/worker/relay) + 버전체크 + 메시지 루프
 │  ├─ config.ts          # 이름·데이터경로 단일 출처 (APP_NAME / DATA_DIR) ★
-│  ├─ claude.ts          # claude -p spawn (구독 OAuth, API키 차단) ★
-│  ├─ relay.ts           # relay 위임 (worker 에 큐 전달 + deferred)
-│  ├─ channels/          # channel.ts(인터페이스) + telegram · slack · redis(worker) + owner
-│  ├─ heartbeat.ts · skills.ts · curator.ts · bootstrap.ts · handler.ts
+│  ├─ claude.ts          # claude -p spawn (cwd=~/.nuanua, SYSTEM.md 주입, OAuth) ★
+│  ├─ relay.ts · version.ts · media.ts
+│  ├─ channels/          # channel(인터페이스) + telegram · slack · redis(worker) + owner
+│  ├─ heartbeat · skills · curator · bootstrap · handler
 │  └─ run.sh             # 재시작 래퍼
-├─ identity/             # SOUL/IDENTITY/CLAUDE .template + SETUP.md + BOOTSTRAP.md
-├─ memory/               # active / semantic / archive (빈 구조)
-└─ HEARTBEAT.template.md # 자율 루틴 (선택)
+├─ identity/             # SYSTEM.md(번들 코어 프롬프트) + SOUL/IDENTITY/CLAUDE .template + SETUP + BOOTSTRAP
+├─ memory/ · skills/     # 빈 구조 (실데이터는 ~/.nuanua)
+└─ HEARTBEAT.template.md
 ```
 
 ### 실행 모드
 
 - **standalone** (기본): 이 컴퓨터에서 메신저 입구+처리 모두.
-- **relay + worker**: 외출 중 노트북을 꺼도 작동. 외부 상시 서버(relay)가 메신저를 받고, 로컬(worker)이 켜져 있으면 위임 / 꺼져 있으면 "나중에 처리"(켜지면 이어서 답). `MODE` 환경변수로 전환하며 **코어 코드는 동일**. Redis 큐로 연결. **설정: `bash setup-relay.sh` 위자드**(worker 자동전환 + 배포 안내), 배포 골격: `Dockerfile`/`fly.toml`.
-### 업그레이드 · 데이터 분리
+- **relay + worker**: 외출 중 노트북을 꺼도 작동. 외부 상시 서버(relay)가 메신저를 받고, 로컬(worker)이 켜져 있으면 위임 / 꺼져 있으면 "나중에 처리"(켜지면 이어서 답). `MODE` 환경변수로 전환하며 **코어 코드는 동일**. Redis 큐로 연결. **설정: `bash scripts/setup-relay.sh` 위자드**(worker 자동전환 + 배포 안내), 배포 골격: `Dockerfile`/`fly.toml`.
 
-정체성·기억은 코드와 분리된 전용 폴더 `~/.nuanua/` 에 있습니다(Claude Code 본체 `~/.claude` 와 섞이지 않음). 그래서 `./upgrade.sh` 는 **코드만 갱신하고 데이터는 그대로 보존**합니다. 예전에 `~/.claude` 에 설치했다면 `./migrate.sh` 로 비파괴 이전하세요.
+### 3계층 구조 (무결성·단순성)
+
+| 위치 | 무엇 | 성격 |
+|---|---|---|
+| **`nuanua` repo** (이 폴더) | 코드·지침·`SYSTEM.md` = THE RULE | git 으로 버전업, 무결 |
+| **`~/.nuanua`** | 정체성·기억·`USER.md`·세션 = 데이터 | 보존(업그레이드 무관), 백업=git |
+| **`~/.claude`** | Claude Code 인증 | 순수 유지(공유) |
+
+- **업그레이드**: `scripts/upgrade.sh` 는 repo 코드만 갱신하고 `~/.nuanua` 데이터는 보존. (구버전 `~/.claude` 설치는 `scripts/migrate.sh` 로 비파괴 이전)
+- **정체성 전파**: 번들 `identity/SYSTEM.md` 를 `--append-system-prompt` 로 주입 → `git pull` 로 모든 봇에 반영 (`CLAUDE.md` 는 사용자 커스텀만, 보존)
+- **CLI opt-in**: 터미널 `claude` 에서도 nuanua 데이터를 참조하려면 `bash scripts/setup-cli.sh on` (`~/.claude/CLAUDE.md` 에 참조 블록 추가, `off` 로 제거). 봇은 영향 없음
+- **데이터 백업/영속**: `cd ~/.nuanua && git init` 으로 정체성·기억을 버전관리 (세션·로그는 gitignore)
 
 ### 비용 구조
 

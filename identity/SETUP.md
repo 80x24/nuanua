@@ -88,13 +88,13 @@ EOF
 
 **셋업 위자드로 진행하세요 (권장):**
 ```bash
-cd <설치경로> && bash setup-relay.sh
+cd <설치경로> && bash scripts/setup-relay.sh
 ```
 위자드가 묻는 대로 답하면 — Redis URL 을 받아 **이 컴퓨터를 worker 로 자동 전환**(bot/.env)하고, **relay 배포(Fly) 명령을 안내**합니다.
 
 직접 단계로 하려면:
 1. **Redis 만들기** — Upstash 등에서 생성 → 연결 URL(`redis://...`) 복사.
-2. **이 컴퓨터를 worker 로** — `bash setup-relay.sh worker redis://...` (bot/.env 에 `MODE=worker`+`REDIS_URL` 자동 설정).
+2. **이 컴퓨터를 worker 로** — `bash scripts/setup-relay.sh worker redis://...` (bot/.env 에 `MODE=worker`+`REDIS_URL` 자동 설정).
 3. **relay 배포** — 외부 서버(Fly)에 `MODE=relay`+`REDIS_URL`+`CHANNEL`+메신저 토큰으로 배포. 골격: `Dockerfile`·`fly.toml`. (`flyctl launch --no-deploy` → `flyctl secrets set ...` → `flyctl deploy`)
 4. **메신저 토큰은 relay 에만** — worker(이 컴퓨터) .env 에선 비우세요(이중 수신 방지).
 

@@ -17,7 +17,7 @@ export async function checkUpdate(repoDir: string, force = false): Promise<{ beh
   }
   try { writeFileSync(STAMP, String(Date.now())) } catch {}
   try {
-    const proc = Bun.spawn(['bash', join(repoDir, 'upgrade.sh'), '--check'], { stdout: 'pipe', stderr: 'ignore' })
+    const proc = Bun.spawn(['bash', join(repoDir, 'scripts', 'upgrade.sh'), '--check'], { stdout: 'pipe', stderr: 'ignore' })
     const out = (await new Response(proc.stdout).text()).trim()
     await proc.exited
     const m = out.match(/BEHIND (\d+)/)

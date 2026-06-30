@@ -5,7 +5,7 @@
 #          bash install-daemon.sh uninstall (해제)
 set -e
 
-REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "$REPO_DIR/lib.sh"   # APP_NAME, DATA_DIR
 RUN="$REPO_DIR/bot/run.sh"
 ACTION="${1:-install}"

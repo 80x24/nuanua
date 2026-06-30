@@ -6,7 +6,7 @@
 #   새로 생긴 기본 템플릿만 보충한다. 기존 정체성·기억은 그대로 보존된다.
 set -e
 
-REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "$REPO_DIR/lib.sh"   # APP_NAME, DATA_DIR (SSOT)
 
 # --check: 업데이트 있는지만 확인 (fetch + 비교, 파일 변경·재시작 없음) — 봇/cron 게이트용

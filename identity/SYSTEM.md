@@ -23,5 +23,5 @@
 ## 업그레이드
 "최신으로 업데이트/업그레이드 해줘" 요청 시:
 1. `cat ~/.nuanua/.nuanua-path` 로 설치 경로 확인 (보통 `~/nuanua`)
-2. `bash <경로>/upgrade.sh` 실행 — 코드만 갱신, `~/.nuanua`(정체성·기억)는 보존
+2. `bash <경로>/scripts/upgrade.sh` 실행 — 코드만 갱신, `~/.nuanua`(정체성·기억)는 보존
 3. 끝나면 응답에 `[[do:restart]]` 를 넣어 새 코드로 재시작
