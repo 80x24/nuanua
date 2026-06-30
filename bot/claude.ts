@@ -4,7 +4,7 @@
 // 인증시킨다. 키가 떠 있으면 OAuth보다 우선해 "조용히 종량제로 과금"되므로 반드시 지운다.
 
 import { randomUUID } from 'crypto'
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { DATA_DIR } from './config'
 
@@ -13,10 +13,39 @@ const TIMEOUT_MS = Number(process.env.CLAUDE_TIMEOUT_MS) || 1_800_000 // 30분
 const GRACEFUL_KILL_MS = 10_000
 const AUTOCOMPACT_PCT = process.env.CLAUDE_AUTOCOMPACT_PCT || '85'
 
-// 코어 시스템 프롬프트 (번들 identity/SYSTEM.md — git 으로 전파, 매 호출 주입. 사용자 커스텀은 ~/.nuanua/CLAUDE.md)
-const SYSTEM_PROMPT = (() => {
-  try { return readFileSync(join(import.meta.dir, '..', 'identity', 'SYSTEM.md'), 'utf-8') } catch { return '' }
-})()
+// 코어 시스템 프롬프트 = 번들 SYSTEM.md(git 전파) + 정체성(SOUL/IDENTITY/USER) + 활성 스킬 인덱스.
+// Hermes "slot #1 frozen prefix" 원칙: 프로세스 시작 시 1회 조립해 세션 내내 고정(프리픽스 캐시 보존).
+// → 인격·사용자모델·스킬을 에이전트의 "알아서 읽기"에 맡기지 않고 항상 컨텍스트에 보장한다.
+//   (cwd 의 ~/.nuanua/CLAUDE.md 는 claude 가 자동 로드하지만 SOUL/USER/스킬은 아니므로 여기서 주입)
+function buildSystemPrompt(): string {
+  const parts: string[] = []
+  try { parts.push(readFileSync(join(import.meta.dir, '..', 'identity', 'SYSTEM.md'), 'utf-8').trim()) } catch {}
+  // 정체성·사용자 (데이터 폴더) — 인격·사용자모델 연속성 보장
+  const idFiles: [string, string][] = [
+    ['정체성 — SOUL', join(DATA_DIR, 'identity', 'SOUL.md')],
+    ['정체성 — IDENTITY', join(DATA_DIR, 'identity', 'IDENTITY.md')],
+    ['사용자 — USER', join(DATA_DIR, 'USER.md')],
+  ]
+  for (const [label, p] of idFiles) {
+    try { const t = readFileSync(p, 'utf-8').trim(); if (t) parts.push(`# ${label}\n${t}`) } catch {}
+  }
+  // 활성 스킬 인덱스 (progressive disclosure — 이름+요약만, 전문은 필요시 Read)
+  try {
+    const dir = join(DATA_DIR, 'skills', 'active')
+    const files = readdirSync(dir).filter((f) => f.endsWith('.md'))
+    if (files.length) {
+      const idx = files.map((f) => {
+        const body = readFileSync(join(dir, f), 'utf-8')
+        const desc = (body.match(/description:\s*(.+)/i)?.[1]
+          || body.split('\n').find((l) => l.trim() && !l.startsWith('#') && !l.startsWith('-')) || '').trim().slice(0, 100)
+        return `- ${f.replace(/\.md$/, '')}: ${desc}`
+      }).join('\n')
+      parts.push(`# 활성 스킬 (관련 작업이면 \`skills/active/<이름>.md\` 를 Read 해 따르라)\n${idx}`)
+    }
+  } catch {}
+  return parts.join('\n\n---\n\n')
+}
+const SYSTEM_PROMPT = buildSystemPrompt()
 
 // SIGTERM 후 유예시간 내 안 죽으면 SIGKILL — spawn 종료 공통 로직 (값 통일)
 function killGracefully(proc: ReturnType<typeof Bun.spawn> | null, graceMs = GRACEFUL_KILL_MS) {
